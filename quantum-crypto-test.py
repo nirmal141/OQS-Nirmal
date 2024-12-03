@@ -149,6 +149,75 @@ class QuantumAttackSimulator:
         results['successful_recoveries'] = sum(not outcome for outcome in results_list)
         results['failed_attempts'] = attempts - results['successful_recoveries']
         return results
+    
+    @staticmethod
+    def simulate_mitm_attack(transmitted_message, adversary_params):
+        """
+        Simulates a quantum MITM (Man-In-The-Middle) attack.
+        :param transmitted_message: The message intercepted by the attacker (dictionary).
+        :param adversary_params: Parameters or configurations of the MITM attacker.
+        :return: Modified message or attack success metrics.
+        """
+        print("Simulating quantum MITM attack...")
+
+        # Step 1: Intercept the message (already a dictionary)
+        intercepted_message = transmitted_message
+        print(f"Intercepted message: {intercepted_message}")
+
+        # Step 2: Analyze the message
+        message_analysis = f"Message length: {len(intercepted_message)}"
+        print(f"Analysis: {message_analysis}")
+
+        # Step 3: Serialize the intercepted message to a string for processing
+        intercepted_message_str = json.dumps(intercepted_message)
+
+        # Step 4: Modify the message
+        if adversary_params.get("strategy") == "xor":
+            key = adversary_params.get("key", 0x42)  # Default XOR key
+            modified_message_str = ''.join(
+                chr(ord(char) ^ key) for char in intercepted_message_str
+            )
+        elif adversary_params.get("strategy") == "reverse":
+            modified_message_str = intercepted_message_str[::-1]
+        else:
+            modified_message_str = intercepted_message_str  # No modification
+
+        # Step 5: Deserialize the modified string back to a dictionary
+        try:
+            modified_message = json.loads(modified_message_str)
+        except json.JSONDecodeError:
+            print("Error: Modified message is not valid JSON!")
+            modified_message = modified_message_str  # Fallback to raw string
+
+        print(f"Modified message: {modified_message}")
+
+        # Step 6: Forward the message
+        forwarded_message = modified_message
+        print(f"Forwarded message: {forwarded_message}")
+
+        # Step 7: Report success metrics
+        success_metric = "Attack Successful - Message was altered" if modified_message != transmitted_message else "Attack Neutral - No changes made"
+
+        return {
+            "intercepted_message": intercepted_message,
+            "modified_message": modified_message,
+            "forwarded_message": forwarded_message,
+            "success_metric": success_metric,
+        }
+
+    @staticmethod
+    def evaluate_attack_success(intercepted, modified, forwarded):
+        """
+        Evaluates the success of the MITM attack.
+        :param intercepted: The original intercepted message.
+        :param modified: The modified version of the message.
+        :param forwarded: The message forwarded to the receiver.
+        :return: Success metric (e.g., how much the forwarded message differs from the original).
+        """
+        if intercepted != forwarded:
+            return "Attack Successful - Message was altered and forwarded"
+        else:
+            return "Attack Neutral - Message was intercepted but not altered"
 
 def demo_quantum_financial_security():
     """
@@ -193,8 +262,23 @@ def demo_quantum_financial_security():
     logging.info("\n6. Simulating Quantum Attack")
     attack_results = QuantumAttackSimulator.simulate_key_recovery(system, attempts=1000)
 
-    # Display attack simulation results
-    logging.info("\nAttack Simulation Results:\n%s", json.dumps(attack_results, indent=2))
+    # Display key recovery attack simulation results
+    logging.info("Key Recovery Results:\n%s", json.dumps(attack_results, indent=2))
+
+    # Simulate a quantum MITM attack to intercept and modify the financial data
+    logging.info("\n6b. Simulating Quantum MITM Attack")
+    mitm_results = QuantumAttackSimulator.simulate_mitm_attack(
+        financial_data,
+        adversary_params={
+            "strategy": "xor",  # Specify the strategy for the MITM attack
+            "key": 0x3F         # Example XOR key
+        }
+    )
+
+    # Display mitm attack simulation results
+    logging.info("\n")
+    logging.info("MITM Attack Results:\n%s", json.dumps(mitm_results, indent=2))
+    
     logging.info("-- Demo Complete --")
 
 if __name__ == '__main__':
